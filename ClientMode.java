@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
 import static java.lang.System.in;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -21,6 +22,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 /**
  *
@@ -28,109 +30,174 @@ import java.util.Scanner;
  */
 public class ClientMode {
     
+    public static final int SERVICE_PORT = 8;
+    public static final int BUFSIZE = 256;
     DatagramSocket socket;
     
     public ClientMode(){
         
     }
-    //ArrayList<Mahasiswa> mahasiswa = new ArrayList<Mahasiswa>();
     
     
-    public void createAndListenSocket(){
+    
+    public static void main(String[] args) throws UnknownHostException, SocketException {
         
+        List<Mahasiswa> mahasiswa = new ArrayList<Mahasiswa>();
+        String nim, nama, alamat, kelas;
+        int posisi;
+        boolean run = true;
         
-            //choice provided to the user
-            System.out.println("Welcome To Mahasiswa Praktikum Sister");
-            System.out.println("Enter your choice");
-            System.out.println("Enter 1:->show mahasiswa");
-            System.out.println("Enter 2:->Create new mahasiswa");
-            System.out.println("Enter 3:->Delete mahasiswa");
-            System.out.println("Enter 4:->quit");
-            System.out.println("Enter 5:->Update mahasiswa");
-            
-            Scanner in = new Scanner(System.in);
-            int choice = in.nextInt();
+        SerializationDemo demo = new SerializationDemo();
+        String direktori = "Datamahasiwa.ser";
+        
+        String hostname = "localhost";
+        InetAddress addr = InetAddress.getByName(hostname);
+
+        DatagramSocket socket = new DatagramSocket();
+        socket.setSoTimeout(2000);
+        
         try {
-            
-
-            
-            //show 
-            if (choice == 2) {
+            int choice;
+            Scanner input = new Scanner(System.in);
+            while (true) {                
+                System.out.println("==================================");
+                System.out.println("Welcome To Mahasiswa Praktikum Sister");
                 
-            
-            socket = new DatagramSocket();
-            InetAddress IPAddress = InetAddress.getByName("localhost");
-            byte[] incomingData = new byte[1024];
-            String str1, str2, str3;
-            
-            
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Enter data of mahasiswa you want to add");
-            Scanner in1 = new Scanner(System.in);
-            
-            str1 = reader.readLine(); //nim
-            str2 = reader.readLine(); //nama
-            str3 = reader.readLine(); //alamat
-            
-            Mahasiswa mahasiswa = new Mahasiswa(str1, str2, str3);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            ObjectOutputStream os = new ObjectOutputStream(outputStream);
-            os.writeObject(mahasiswa);
-            
+                
+                System.out.println("Enter 1:->Create new data mahasiswa");
+                System.out.println("Enter 2:->Update data mahasiswa");
+                System.out.println("Enter 3:->Delete data mahasiswa");
+                System.out.println("Enter 4:->Print data mahasiswa");
+                System.out.println("Enter 5:-> QUIT");
+                choice = input.nextInt();
+                
+                if (choice == 1) {
+                    System.out.println("==================================");
+                    System.out.print("NIM : ");
+                    nim = input.next();
+                    System.out.print("Nama : ");
+                    nama = input.next();
+                    System.out.print("Alamat : ");
+                    alamat = input.next();
+                    System.out.print("Kelas : ");
+                    kelas = input.next();
+                    
+                    mahasiswa.add(new Mahasiswa(nim, nama, alamat, kelas));
+                    System.out.println("\n" + mahasiswa);
 
-            
-            byte[] data = outputStream.toByteArray();
-            
-            DatagramPacket sendPacket = new DatagramPacket(data, data.length, IPAddress, 9876);
-            socket.send(sendPacket);
-            System.out.println("Message sent from client");
-            
-            DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-            
-            socket.receive(incomingPacket);
-            
-            String response = new String (incomingPacket.getData());
-            System.out.println("Response from server : " + response);
-            Thread.sleep(2000);
-            
-            FileOutputStream fos = new FileOutputStream("Datamhs.txt");
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
+                    demo.serialize(mahasiswa, direktori);
+                    System.out.println("Save Successful");
+                    
+                    //send to server
+                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+                    PrintStream pout = new PrintStream(bout);
+                    pout.print(mahasiswa);
 
-            oos.writeObject(mahasiswa);
-            oos.flush();
-            oos.close();
+                    byte[] barray = bout.toByteArray();
 
-            }
-            
-            //show 
-            //untuk show masih belum bisa menampilkan
-            if (choice == 1) {
-                try{
-                FileInputStream  fis = new FileInputStream("Datamhs.txt");
-                ObjectInputStream ois = new ObjectInputStream(fis);
-                ArrayList object2 = (ArrayList)ois.readObject();
+                    DatagramPacket packet = new DatagramPacket(barray, barray.length, addr, SERVICE_PORT);
+                    System.out.println("\nSending packet...");
+                    socket.send(packet);
+                    System.out.println(packet + " send!");
+                } else if(choice == 2){
+                    System.out.println("==================================");
+                    System.out.print("Update data Index ");
+                    posisi = input.nextInt();
+                    if (posisi > mahasiswa.size() - 1) {
+                        System.out.println("Index Not Found!");
+                        break;
+                    }
 
-                ois.close();
-                System.out.println("mahasiswa"+" "+ object2 + " ");
+                    System.out.print("Data : " + mahasiswa.get(posisi));
+                    System.out.println("================");
+                    System.out.print("\nNIM : ");
+                    nim = input.next();
+                    System.out.print("Nama : ");
+                    nama = input.next();
+                    System.out.print("Alamat : ");
+                    alamat = input.next();
+                    System.out.print("Kelas : ");
+                    kelas = input.next();
+                    
+                    Mahasiswa mhs = new Mahasiswa(nim, nama, alamat, kelas);
+
+                    mahasiswa.remove(posisi);
+                    mahasiswa.add(posisi, mhs);
+                    System.out.println("\n" + mahasiswa);
+
+                    demo.serialize(mahasiswa, direktori);
+                    System.out.println("Save Successful");
+                    
+                    //send update data to server
+                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+                    PrintStream pout = new PrintStream(bout);
+                    pout.print(mahasiswa);
+
+                    byte[] barray = bout.toByteArray();
+
+                    DatagramPacket packet = new DatagramPacket(barray, barray.length, addr, SERVICE_PORT);
+                    System.out.println("\nSending packet...");
+                    socket.send(packet);
+                    System.out.println(packet + " send!");
+                    
+                }
+                else if(choice == 3){
+                    System.out.println("==================================");
+                    System.out.print("Delete data Mahasiswa : ");
+                    posisi = input.nextInt();
+                    if (posisi > mahasiswa.size() - 1) {
+                        System.out.println("Index Not Found!");
+                        break;
+                    }
+                    
+                    Mahasiswa mhs = mahasiswa.get(posisi);
+                    mahasiswa.remove(posisi);
+
+                    demo.serialize(mahasiswa, direktori);
+                    System.out.println("Delete Successful");
+                    
+                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+                    PrintStream pout = new PrintStream(bout);
+                    pout.print(mahasiswa);
+
+                    byte[] barray = bout.toByteArray();
+
+                    DatagramPacket packet = new DatagramPacket(barray, barray.length, addr, SERVICE_PORT);
+                    System.out.println("\nSending packet...");
+                    socket.send(packet);
+                    System.out.println(packet + " send!");
+                }
+                else if(choice == 4){
+                    System.out.println("==================================");
+                    System.out.println("Data of mahasiswa : ");
+
+                    int i = 0;
+                    for (Mahasiswa mhs : demo.deserialize(direktori)) {
+                        System.out.printf("%d. %s", i++, mhs);
+                        System.out.println("");
+                    }
+                }
+                else if(choice == 5){
+                    System.out.println("==================================");
+                    System.out.println("You're logout");
+                    
+                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+                    PrintStream pout = new PrintStream(bout);
+                    pout.print(choice);
+
+                    byte[] barray = bout.toByteArray();
+
+                    DatagramPacket packet = new DatagramPacket(barray, barray.length, addr, SERVICE_PORT);
+                    socket.send(packet);
+                    socket.close();
+                    run = false;
+                    System.exit(0);
+                }
             }
-            catch(Exception e){
-                e.printStackTrace();
-            }
-            }
-            
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (SocketException ex) {
-            ex.printStackTrace();
-        } catch (IOException es) {
-            es.printStackTrace();
-        } catch (InterruptedException ioe) {
-            ioe.printStackTrace();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
-    
-    public static void main(String[] args)  {
-        ClientMode client = new ClientMode();
-        client.createAndListenSocket();
-    }
 }
+
+

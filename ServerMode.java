@@ -7,60 +7,65 @@ package PertemuanSocket;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+
 /**
  *
  * @author SUBARI
  */
 public class ServerMode {
     
-    DatagramSocket socket = null;
+    public static final int SERVICE_PORT = 8;
+    public static final int BUFSIZE = 4096;
+    DatagramSocket socket ;
     
     public ServerMode(){
-        
+        try {
+            socket = new DatagramSocket(SERVICE_PORT);
+            System.out.println("Server active on port " + socket.getLocalPort());
+            
+        } catch (Exception e) {
+            System.out.println("Unable to bind port");
+        }
     }
     
     public void createAndListenSocket() {
-        try {
-            socket = new DatagramSocket(9876);
-            byte[] inComingData = new byte[1024];
+        byte[] buffer = new byte[BUFSIZE];
+        boolean run = true;
+        while (run) {            
+          try {
+            DatagramPacket packet = new DatagramPacket(buffer, BUFSIZE);
+            socket.receive(packet);
+            System.out.println("Received packet from " + packet.getAddress() + ":" + packet.getPort() + " of length " + packet.getLength());
             
-            while (true){
-                DatagramPacket incomingPacket = new DatagramPacket(inComingData, inComingData.length);
-                socket.receive(incomingPacket);
-                byte[] data = incomingPacket.getData();
-                ByteArrayInputStream in = new ByteArrayInputStream(data);
-                ObjectInputStream is = new ObjectInputStream(in);
-                
-                    try {
-                        Mahasiswa mahasiswa = (Mahasiswa) is.readObject();
-                        System.out.println("Mahasiswa object received = " + mahasiswa);
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
+            String data = new String(packet.getData(), 0, packet.getLength());
+            if(data.equalsIgnoreCase("5")){
+                run = false;
+            }else{
+                try{
+                    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("databaru.ser"));
+                        for(int i =0; i<data.length(); i++){
+                            out.writeObject(data);
+                        }
+                        out.flush();
+                        out.close();
+                    }catch(Exception e){
+                        System.out.println(e);
                     }
-                    
-                InetAddress IPAddress = incomingPacket.getAddress();
-                int port = incomingPacket.getPort();
-                String reply = "Thanks for your message";
-                byte[] replyBytea = reply.getBytes();
-                DatagramPacket replyPacket = new DatagramPacket(replyBytea, replyBytea.length, IPAddress, port);
-                socket.send(replyPacket);
-                Thread.sleep(2000);
-                System.exit(0);
-            }
+                }
             
-        } catch (SocketException ex) {
-            ex.printStackTrace();
-        } catch (IOException i ){
-            i.printStackTrace();
-        } catch (InterruptedException exi){
-            exi.printStackTrace();
-        }
+            socket.send(packet);
+          } catch(IOException ioe) {
+              System.out.println("Error: " + ioe);
+          }
+        }    
     }
     
     public static void main(String[] args) {

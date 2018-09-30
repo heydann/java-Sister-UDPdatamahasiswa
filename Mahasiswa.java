@@ -16,11 +16,13 @@ public class Mahasiswa implements Serializable{
     private String nim;
     private String nama;
     private String alamat;
+    private String kelas;
  
-    public Mahasiswa (String nim, String nama, String alamat){
+    public Mahasiswa (String nim, String nama, String alamat, String kelas){
         this.nim = nim;
         this.nama = nama;
         this.alamat = alamat;
+        this.kelas = kelas;
     }
     
     public String getNim(){
@@ -47,8 +49,15 @@ public class Mahasiswa implements Serializable{
         this.alamat = alamat;
     }
     
+    public String getKelas(){
+        return kelas;
+    }
+    
+    public void setKelas(String kelas){
+        this.kelas = kelas;
+    }
     public String toString(){
-        return "\nNim : " + getNim() + "\nNama : " + getNama() + "\nAlamat : " + getAlamat();
+        return "\nNim : " + getNim() + "\nNama : " + getNama() + "\nAlamat : " + getAlamat() + "\nKelas : " + getKelas();
     }
        
 }
